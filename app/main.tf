@@ -56,6 +56,12 @@ variable "route_table_name" { # required
   type = string
 }
 
+variable "route_table_cidr_block" {
+  type = string
+  default = "0.0.0.0/0"
+}
+
+# VPC
 resource "aws_vpc" "vpc" {  # vpc here is the reference for further usage in this file
   cidr_block = var.cidr_block
   enable_dns_hostnames = true
@@ -68,7 +74,7 @@ resource "aws_vpc" "vpc" {  # vpc here is the reference for further usage in thi
   }
 }
 
-# subnets
+# Subnets
 resource "aws_subnet" "subnet" {
   count = var.zonecount
   # cidr_block = var.subnet_cidr_block
@@ -93,7 +99,7 @@ resource "aws_internet_gateway" "internet_gateway" {
 resource "aws_route_table" "route_table" {
   vpc_id = aws_vpc.vpc.id
   route {
-    cidr_block = "0.0.0.0/0"  #keeping this static according to assignment
+    cidr_block = var.route_table_cidr_block  #keeping this static according to assignment
     gateway_id = aws_internet_gateway.internet_gateway.id
   }
   tags = {

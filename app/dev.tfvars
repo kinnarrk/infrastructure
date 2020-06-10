@@ -8,3 +8,4 @@ zonecount = 3   # for assignment 4
 startindex = 0
 gateway_name = "csye6225-gateway"
 route_table_name = "csye6225-route-table"
+route_table_cidr_block = "0.0.0.0/0"
