@@ -1,0 +1,10 @@
+region = "us-east-1"
+cidr_block = "10.0.0.0/16"
+subnet_cidr_block = "10.0.0.0/24"
+vpc_name = "csye6225-vpc"
+vpc_tag = "csye6225-vpc-dev"
+subnet_name = "csye6225-subnet"
+zonecount = 3   # for assignment 4
+startindex = 0
+gateway_name = "csye6225-gateway"
+route_table_name = "csye6225-route-table"
