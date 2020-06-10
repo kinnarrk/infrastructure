@@ -78,6 +78,43 @@ gateway_name = "csye6225-gateway"
 route_table_name = "csye6225-route-table"
 ```
 
+## Creating multiple VPCs from same `.tf` file(s)
+There are two ways to achieve this
+### Workspace 
+Ref: https://www.terraform.io/docs/state/workspaces.html
+```
+$ terraform workspace
+Usage: terraform workspace
+
+  new, list, show, select and delete Terraform workspaces.
+```
+Terraform uses `default` workspace when we initialize project with `terraform init`
+
+Create new workspace using:
+```
+$ terraform workspace new bar
+Created and switched to workspace "bar"!
+```
+
+Switch to different workspace:
+```
+$ terraform workspace select foo
+Switched to workspace "foo"!
+```
+
+### Modules
+Ref: https://www.terraform.io/docs/modules/index.html
+
+Minimal module structure is sufficient for this use case.
+```
+$ tree minimal-module/
+.
+├── README.md
+├── main.tf
+├── variables.tf
+├── outputs.tf
+```
+
 ## Important
 Make sure to export `AWS_PROFILE` with following before executing `terraform` command:
 ```
