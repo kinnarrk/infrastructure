@@ -56,7 +56,7 @@ variable "route_table_name" { # required
   type = string
 }
 
-resource "aws_vpc" "vpc2" {  # vpc here is the reference for further usage in this file
+resource "aws_vpc" "vpc" {  # vpc here is the reference for further usage in this file
   cidr_block = var.cidr_block
   enable_dns_hostnames = true
   enable_dns_support = true
@@ -73,7 +73,7 @@ resource "aws_subnet" "subnet" {
   count = var.zonecount
   # cidr_block = var.subnet_cidr_block
   cidr_block = "10.${var.startindex}.${10+count.index}.0/24"
-  vpc_id = aws_vpc.vpc2.id
+  vpc_id = aws_vpc.vpc.id
   availability_zone = data.aws_availability_zones.available.names[count.index]
   map_public_ip_on_launch = true
   tags = {
@@ -83,7 +83,7 @@ resource "aws_subnet" "subnet" {
 
 # Internet gateway for the public subnets
 resource "aws_internet_gateway" "internet_gateway" {
-  vpc_id = aws_vpc.vpc2.id
+  vpc_id = aws_vpc.vpc.id
   tags = {
     Name = var.gateway_name # gateway would be created with this name
   }
@@ -91,7 +91,7 @@ resource "aws_internet_gateway" "internet_gateway" {
 
 # Routing table for public subnets
 resource "aws_route_table" "route_table" {
-  vpc_id = aws_vpc.vpc2.id
+  vpc_id = aws_vpc.vpc.id
   route {
     cidr_block = "0.0.0.0/0"  #keeping this static according to assignment
     gateway_id = aws_internet_gateway.internet_gateway.id
