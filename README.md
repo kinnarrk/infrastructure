@@ -23,11 +23,11 @@ Follow instruction provided here: https://docs.aws.amazon.com/cli/latest/usergui
 aws configure --profile dev 
 ```
 (provide key, secret and default region)
-- Use dev profile in aws cli
+Use dev profile in aws cli
 ```
 export AWS_PROFILE=dev
 ```
-- Use prod profile in aws cli
+Use prod profile in aws cli
 ```
 export AWS_PROFILE=prod
 ```
