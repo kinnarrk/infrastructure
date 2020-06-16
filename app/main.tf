@@ -265,7 +265,7 @@ resource "aws_s3_bucket" "s3b" {
 
   tags = {
     Name = "S3 bucket"
-    Environment = "dev"
+    # Environment = "dev"
   }
 }
 
@@ -321,6 +321,10 @@ resource "aws_instance" "ec2" {
       delete_on_termination = true
     }
   ]
+
+  # user_data = "${file("../../tmp/aws/userdata.sh")}"
+
+  
 
   # tags = {
   #   "Env"      = "Private"
