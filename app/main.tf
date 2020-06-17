@@ -73,6 +73,10 @@ variable "s3_bucket_name" { # required
   type = string
 }
 
+variable "subnet_group_name" { # required
+  type = string
+}
+
 variable "db_identifier" { # required
   type = string
 }
@@ -88,6 +92,31 @@ variable "db_password" { # required
 variable "db_name" { # required
   type = string
 }
+
+variable "ec2_instance_name" { # required
+  type = string
+}
+
+variable "ami_id" { # required
+  type = string
+}
+
+variable "pub_key" { # required
+  type = string
+}
+
+variable "s3_iam_profile_name" { # required
+  type = string
+}
+
+variable "s3_iam_role_name" { # required
+  type = string
+}
+
+variable "s3_iam_policy_name" { # required
+  type = string
+}
+# variables end
 
 # VPC
 resource "aws_vpc" "vpc" {  # vpc here is the reference for further usage in this file
@@ -229,7 +258,7 @@ resource "aws_kms_key" "mykey" {
   deletion_window_in_days = 30
 }
 
-resource "aws_s3_bucket" "s3b" {
+resource "aws_s3_bucket" "kinnars_bucket" {
   bucket = var.s3_bucket_name
   acl = "private"
 
@@ -270,7 +299,12 @@ resource "aws_s3_bucket" "s3b" {
 }
 
 # RDS instance
-resource "aws_db_instance" "db" {
+resource "aws_db_subnet_group" "db_subnet_group" {
+  name = var.subnet_group_name
+  subnet_ids  = aws_subnet.subnet.*.id
+}
+
+resource "aws_db_instance" "mysqldb" {
   engine = "mysql"
   engine_version = "5.7"
   instance_class = "db.t3.micro"
@@ -278,8 +312,8 @@ resource "aws_db_instance" "db" {
   identifier = var.db_identifier
   username = var.db_username
   password = var.db_password
-  count = var.zonecount
-  db_subnet_group_name = aws_subnet.subnet[count.index].id
+  port = 3306
+  db_subnet_group_name =  aws_db_subnet_group.db_subnet_group.name
   publicly_accessible = false
   name = var.db_name
 
@@ -288,68 +322,148 @@ resource "aws_db_instance" "db" {
   allocated_storage    = 20
   storage_type         = "gp2"
   parameter_group_name = "default.mysql5.7"
+
+  skip_final_snapshot = true
+}
+
+# Pub key for aws key pair
+resource "aws_key_pair" "publickey" {
+  key_name   = "public-key"
+  public_key = var.pub_key
 }
 
 # EC2 instance specifying AMI
 resource "aws_instance" "ec2" {
-  name = var.ec2_instance_name
+  # name = var.ec2_instance_name
   ami = var.ami_id
   instance_type = "t2.micro"
   disable_api_termination = false
   associate_public_ip_address = true
 
-  count = var.zonecount
-  # subnet_id = aws_subnet.subnet[count.index].id
-  availability_zone = data.aws_availability_zones.available.names[count.index]
+  subnet_id = aws_subnet.subnet[0].id
+  # count = var.zonecount
+  # availability_zone = data.aws_availability_zones.available.names[count.index]
 
   vpc_security_group_ids = [aws_security_group.application.id]
 
+  key_name = aws_key_pair.publickey.key_name
 
-  root_block_device = [
-    {
-      volume_type = "gp2"
-      volume_size = 20
-      delete_on_termination = true
-    },
-  ]
+  root_block_device {   
+    volume_type = "gp2"
+    volume_size = 20
+    delete_on_termination = true
+  }
 
-  ebs_block_device = [
-    {
-      device_name = "/dev/sdh"
-      volume_type = "gp2"
-      volume_size = 20
-      delete_on_termination = true
-    }
-  ]
+  ebs_block_device {
+    device_name = "/dev/sdh"
+    volume_type = "gp2"
+    volume_size = 20
+    delete_on_termination = true
+  }
 
-  # user_data = "${file("../../tmp/aws/userdata.sh")}"
+  user_data = <<-EOF
+                #!/bin/bash
+                echo "DBName=${var.db_name}" >> /etc/environment
+                echo "DBUser=${var.db_username}" >> /etc/environment
+                echo "DBHost=${aws_db_instance.mysqldb.address}" >> /etc/environment
+                echo "DBPort=${aws_db_instance.mysqldb.port}" >> /etc/environment
+                echo "DBPassword=${var.db_password}" >> /etc/environment
+                echo "DBEndpoint=${aws_db_instance.mysqldb.endpoint}" >> /etc/environment
+                echo "S3BucketName=${aws_s3_bucket.kinnars_bucket.id}" >> /etc/environment
+                echo "S3BucketDomain=${aws_s3_bucket.kinnars_bucket.bucket_domain_name}" >> /etc/environment
+                echo "S3BucketARN=${aws_s3_bucket.kinnars_bucket.arn}" >> /etc/environment
+                EOF
 
-  
-
-  # tags = {
-  #   "Env"      = "Private"
-  #   "Location" = "Secret"
-  # }
-
-  # network_interface {
-  #   network_interface_id = "${aws_network_interface.foo.id}"
-  #   device_index         = 0
-  # }
-
-  # credit_specification {
-  #   cpu_credits = "unlimited"
-  # }
+  iam_instance_profile = aws_iam_instance_profile.s3_profile.name
 }
 
-# resource "aws_ebs_volume" "ec2_ebs" {
-#   count = var.zonecount
-#   availability_zone = data.aws_availability_zones.available.names[count.index]
-#   size = 20
-# }
+# instance profile role policy and role-policy attachment
+resource "aws_iam_instance_profile" "s3_profile" {
+  name = var.s3_iam_profile_name
+  role = aws_iam_role.role.name
+}
 
-# resource "aws_volume_attachment" "ec2_ebs_att" {
-#   device_name = "/dev/sdh"
-#   volume_id   = aws_ebs_volume.ec2_ebs.id
-#   instance_id = aws_instance.ec2.id
-#   type = "gp2" # (Default: "gp2")
-# }
+resource "aws_iam_role" "role" {
+  name = var.s3_iam_role_name
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "ec2.amazonaws.com"
+      },
+      "Effect": "Allow"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "policy" {
+  name = var.s3_iam_policy_name
+  description = "IAM policy for EC2 to access S3 bucket"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": 
+  [
+    {
+        "Effect": "Allow",
+        "Action": [
+            "s3:ListAllMyBuckets"
+        ],
+        "Resource": "arn:aws:s3:::*"
+    },
+    {
+        "Effect": "Allow",
+        "Action": [
+            "s3:ListBucket",
+            "s3:GetBucketLocation"
+        ],
+        "Resource": "arn:aws:s3:::${var.s3_bucket_name}"
+    },
+    {
+        "Effect": "Allow",
+        "Action": [
+            "s3:PutObject",
+            "s3:PutObjectAcl",
+            "s3:GetObject",
+            "s3:GetObjectAcl",
+            "s3:GetObjectVersion",
+            "s3:DeleteObject",
+            "s3:DeleteObjectVersion"
+        ],
+        "Resource": "arn:aws:s3:::${var.s3_bucket_name}/*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "role-policy-attach" {
+  role = aws_iam_role.role.name
+  policy_arn = aws_iam_policy.policy.arn
+}
+
+
+resource "aws_dynamodb_table" "basic-dynamodb-table" {
+  name = "csye6225"
+  hash_key = "id"
+  billing_mode = "PAY_PER_REQUEST"
+  read_capacity  = 5
+  write_capacity = 5
+  range_key = "timestamp"
+
+  attribute {
+    name = "id"
+    type = "S"
+  }
+
+  attribute {
+    name = "timestamp"
+    type = "S"
+  }
+}

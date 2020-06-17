@@ -72,10 +72,25 @@ subnet_cidr_block = "10.0.0.0/24"
 vpc_name = "csye6225-vpc"
 vpc_tag = "csye6225-vpc-dev"
 subnet_name = "csye6225-subnet"
-zonecount = 3
-startindex = 0
+zonecount = 3   # Keep this count on the basis of availability zones in "region"
+startindex = 0  # starting index of second octate of subnet cidr_block
 gateway_name = "csye6225-gateway"
 route_table_name = "csye6225-route-table"
+route_table_cidr_block = "0.0.0.0/0"
+application_security_group_name = "app_sec_group"
+database_security_group_name = "db_sec_group"
+s3_bucket_name = "kinnarkansara-s3-bucket"
+subnet_group_name = "csye6225-subnet-rds-group"
+db_identifier = "csye6225su2020"
+db_username = "csye6225su2020"
+db_password = "some_random_secure_password"
+db_name = "csye6225"
+ec2_instance_name = "my-ec2-instance"
+ami_id = "ami-0c723e6d53285134d"
+pub_key = "ssh-rsa AAAAB... user@ubuntu"
+s3_iam_profile_name = "s3-iam"
+s3_iam_role_name = "EC2-CSYE6225"
+s3_iam_policy_name = "WebAppS3"
 ```
 
 ## Creating multiple VPCs from same `.tf` file(s)
