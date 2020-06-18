@@ -252,7 +252,7 @@ resource "aws_security_group" "database" {
   }
 }
 
-# S3 bucket
+# S3 bucket. Using default AES256 so this is not used for now
 resource "aws_kms_key" "mykey" {
   description = "This key is used to encrypt bucket objects"
   deletion_window_in_days = 30
@@ -286,8 +286,9 @@ resource "aws_s3_bucket" "kinnars_bucket" {
   server_side_encryption_configuration {
     rule {
       apply_server_side_encryption_by_default {
-        kms_master_key_id = aws_kms_key.mykey.arn
-        sse_algorithm = "aws:kms"
+        # kms_master_key_id = aws_kms_key.mykey.arn
+        # sse_algorithm = "aws:kms"
+        sse_algorithm = "AES256"
       }
     }
   }
@@ -372,6 +373,9 @@ resource "aws_instance" "ec2" {
                 echo "S3BucketName=${aws_s3_bucket.kinnars_bucket.id}" >> /etc/environment
                 echo "S3BucketDomain=${aws_s3_bucket.kinnars_bucket.bucket_domain_name}" >> /etc/environment
                 echo "S3BucketARN=${aws_s3_bucket.kinnars_bucket.arn}" >> /etc/environment
+                echo "IAMInstanceProfileName=${aws_iam_instance_profile.s3_profile.name}" >> /etc/environment
+                echo "IAMInstanceProfileARN=${aws_iam_instance_profile.s3_profile.arn}" >> /etc/environment
+                echo "IAMInstanceProfileID=${aws_iam_instance_profile.s3_profile.id}" >> /etc/environment
                 EOF
 
   iam_instance_profile = aws_iam_instance_profile.s3_profile.name
