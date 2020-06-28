@@ -101,7 +101,15 @@ variable "ami_id" { # required
   type = string
 }
 
+variable "ec2_instance_type" { # required
+  type = string
+}
+
 variable "pub_key" { # required
+  type = string
+}
+
+variable "ec2_instance_tag" { # required
   type = string
 }
 
@@ -114,6 +122,38 @@ variable "s3_iam_role_name" { # required
 }
 
 variable "s3_iam_policy_name" { # required
+  type = string
+}
+
+variable "s3_code_deploy_policy_name" { # required
+  type = string
+}
+
+variable "s3_code_deploy_bucket_name" { # required
+  type = string
+}
+
+variable "circleci_user_name" { # required
+  type = string
+}
+
+variable "circleci_upload_to_s3_policy_name" { # required
+  type = string
+}
+
+variable "circleci_codedeploy_policy_name" { # required
+  type = string
+}
+
+variable "aws_account_id" { # required
+  type = string
+}
+
+variable "codedeploy_application_name" { # required
+  type = string
+}
+
+variable "circleci_ec2_ami_policy_name" { # required
   type = string
 }
 # variables end
@@ -261,6 +301,7 @@ resource "aws_kms_key" "mykey" {
 resource "aws_s3_bucket" "kinnars_bucket" {
   bucket = var.s3_bucket_name
   acl = "private"
+  force_destroy = true
 
   lifecycle_rule {
     id      = "log"
@@ -337,7 +378,7 @@ resource "aws_key_pair" "publickey" {
 resource "aws_instance" "ec2" {
   # name = var.ec2_instance_name
   ami = var.ami_id
-  instance_type = "t2.micro"
+  instance_type = var.ec2_instance_type
   disable_api_termination = false
   associate_public_ip_address = true
 
@@ -379,6 +420,10 @@ resource "aws_instance" "ec2" {
                 EOF
 
   iam_instance_profile = aws_iam_instance_profile.s3_profile.name
+
+  tags = {
+    Name = var.ec2_instance_tag
+  }
 }
 
 # instance profile role policy and role-policy attachment
@@ -407,7 +452,7 @@ EOF
 
 resource "aws_iam_policy" "policy" {
   name = var.s3_iam_policy_name
-  description = "IAM policy for EC2 to access S3 bucket"
+  description = "IAM policy for EC2 to access S3 bucket (upload/download images for application)"
 
   policy = <<EOF
 {
@@ -452,6 +497,164 @@ resource "aws_iam_role_policy_attachment" "role-policy-attach" {
   policy_arn = aws_iam_policy.policy.arn
 }
 
+resource "aws_iam_policy" "code_deploy_policy" {
+  name = var.s3_code_deploy_policy_name
+  description = "IAM policy for EC2 to download application from code deploy S3 bucket and deploy"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": 
+  [
+    {
+        "Effect": "Allow",
+        "Action": [
+            "s3:Get*",
+            "s3:List*"
+        ],
+        "Resource": "arn:aws:s3:::${var.s3_code_deploy_bucket_name}"
+    }
+  ]
+}
+EOF
+}
+resource "aws_iam_role_policy_attachment" "role-code-deploy-policy-attach" {
+  role = aws_iam_role.role.name
+  policy_arn = aws_iam_policy.code_deploy_policy.arn
+}
+
+resource "aws_iam_policy" "circleci_upload_to_s3" {
+  name = var.circleci_upload_to_s3_policy_name
+  description = "IAM policy for CircleCI to upload application to S3 bucket"
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "s3:PutObject",
+                "s3:Get*",
+                "s3:List*"
+            ],
+            "Resource": "arn:aws:s3:::${var.s3_code_deploy_bucket_name}"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "circleci_codedeploy" {
+  name = var.circleci_codedeploy_policy_name
+  description = "IAM policy for CircleCI to call CodeDeploy APIs to initiate application deployment on EC2 instances"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "codedeploy:RegisterApplicationRevision",
+        "codedeploy:GetApplicationRevision"
+      ],
+      "Resource": [
+        "arn:aws:codedeploy:${var.region}:${var.aws_account_id}:application:${var.codedeploy_application_name}"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "codedeploy:CreateDeployment",
+        "codedeploy:GetDeployment"
+      ],
+      "Resource": [
+        "*"
+      ]
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "codedeploy:GetDeploymentConfig"
+      ],
+      "Resource": [
+        "arn:aws:codedeploy:${var.region}:${var.aws_account_id}:deploymentconfig:CodeDeployDefault.OneAtATime",
+        "arn:aws:codedeploy:${var.region}:${var.aws_account_id}:deploymentconfig:CodeDeployDefault.HalfAtATime",
+        "arn:aws:codedeploy:${var.region}:${var.aws_account_id}:deploymentconfig:CodeDeployDefault.AllAtOnce"
+      ]
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "circleci_ec2_ami" {
+  name = var.circleci_ec2_ami_policy_name
+  description = "IAM policy for CircleCI to deploy on EC2 instances"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ec2:AttachVolume",
+        "ec2:AuthorizeSecurityGroupIngress",
+        "ec2:CopyImage",
+        "ec2:CreateImage",
+        "ec2:CreateKeypair",
+        "ec2:CreateSecurityGroup",
+        "ec2:CreateSnapshot",
+        "ec2:CreateTags",
+        "ec2:CreateVolume",
+        "ec2:DeleteKeyPair",
+        "ec2:DeleteSecurityGroup",
+        "ec2:DeleteSnapshot",
+        "ec2:DeleteVolume",
+        "ec2:DeregisterImage",
+        "ec2:DescribeImageAttribute",
+        "ec2:DescribeImages",
+        "ec2:DescribeInstances",
+        "ec2:DescribeInstanceStatus",
+        "ec2:DescribeRegions",
+        "ec2:DescribeSecurityGroups",
+        "ec2:DescribeSnapshots",
+        "ec2:DescribeSubnets",
+        "ec2:DescribeTags",
+        "ec2:DescribeVolumes",
+        "ec2:DetachVolume",
+        "ec2:GetPasswordData",
+        "ec2:ModifyImageAttribute",
+        "ec2:ModifyInstanceAttribute",
+        "ec2:ModifySnapshotAttribute",
+        "ec2:RegisterImage",
+        "ec2:RunInstances",
+        "ec2:StopInstances",
+        "ec2:TerminateInstances"
+      ],
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_user_policy_attachment" "circleci_upload_se_user_policy_attach" {
+  user       = var.circleci_user_name
+  policy_arn = aws_iam_policy.circleci_upload_to_s3.arn
+}
+
+resource "aws_iam_user_policy_attachment" "circleci_codedeploy_policy_attach" {
+  user       = var.circleci_user_name
+  policy_arn = aws_iam_policy.circleci_codedeploy.arn
+}
+
+resource "aws_iam_user_policy_attachment" "circleci_ec2_ami_policy_attach" {
+  user       = var.circleci_user_name
+  policy_arn = aws_iam_policy.circleci_ec2_ami.arn
+}
 
 resource "aws_dynamodb_table" "basic-dynamodb-table" {
   name = "csye6225"
