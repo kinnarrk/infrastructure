@@ -125,6 +125,10 @@ variable "s3_iam_policy_name" { # required
   type = string
 }
 
+variable "s3_code_deploy_role_name" { # required
+  type = string
+}
+
 variable "s3_code_deploy_policy_name" { # required
   type = string
 }
@@ -153,7 +157,23 @@ variable "codedeploy_application_name" { # required
   type = string
 }
 
+variable "codedeploy_application_topic" { # required
+  type = string
+}
+
+variable "codedeploy_application_group" { # required
+  type = string
+}
+
 variable "circleci_ec2_ami_policy_name" { # required
+  type = string
+}
+
+variable "route53_zone_id" { # required
+  type = string
+}
+
+variable "route53_domain_name" { # required
   type = string
 }
 # variables end
@@ -417,6 +437,7 @@ resource "aws_instance" "ec2" {
                 echo "IAMInstanceProfileName=${aws_iam_instance_profile.s3_profile.name}" >> /etc/environment
                 echo "IAMInstanceProfileARN=${aws_iam_instance_profile.s3_profile.arn}" >> /etc/environment
                 echo "IAMInstanceProfileID=${aws_iam_instance_profile.s3_profile.id}" >> /etc/environment
+                echo "DEPLOYMENT_GROUP_NAME=production" >> /etc/environment
                 EOF
 
   iam_instance_profile = aws_iam_instance_profile.s3_profile.name
@@ -441,7 +462,9 @@ resource "aws_iam_role" "role" {
     {
       "Action": "sts:AssumeRole",
       "Principal": {
-        "Service": "ec2.amazonaws.com"
+        "Service": [
+          "ec2.amazonaws.com"
+        ]
       },
       "Effect": "Allow"
     }
@@ -497,6 +520,26 @@ resource "aws_iam_role_policy_attachment" "role-policy-attach" {
   policy_arn = aws_iam_policy.policy.arn
 }
 
+resource "aws_iam_role" "code_deploy_role" {
+  name = var.s3_code_deploy_role_name
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": [
+          "codedeploy.amazonaws.com"
+        ]
+      },
+      "Effect": "Allow"
+    }
+  ]
+}
+EOF
+}
+
 resource "aws_iam_policy" "code_deploy_policy" {
   name = var.s3_code_deploy_policy_name
   description = "IAM policy for EC2 to download application from code deploy S3 bucket and deploy"
@@ -512,17 +555,70 @@ resource "aws_iam_policy" "code_deploy_policy" {
             "s3:Get*",
             "s3:List*"
         ],
-        "Resource": "arn:aws:s3:::${var.s3_code_deploy_bucket_name}"
+        "Resource": [
+          "arn:aws:s3:::${var.s3_code_deploy_bucket_name}/*",
+          "arn:aws:s3:::aws-codedeploy-${var.region}/*"
+        ]
+        
     }
   ]
 }
 EOF
 }
-resource "aws_iam_role_policy_attachment" "role-code-deploy-policy-attach" {
+
+resource "aws_iam_role_policy_attachment" "role-policy-attach-code-deploy" {
   role = aws_iam_role.role.name
   policy_arn = aws_iam_policy.code_deploy_policy.arn
 }
 
+resource "aws_iam_role_policy_attachment" "role-code-deploy-policy-attach" {
+  role = aws_iam_role.code_deploy_role.name
+  # this specific policy can also be used for limited access
+  # policy_arn = aws_iam_policy.code_deploy_policy.arn
+  policy_arn = "arn:aws:iam::aws:policy/service-role/AWSCodeDeployRole"
+}
+
+resource "aws_codedeploy_app" "bookstore" {
+  name = var.codedeploy_application_name
+}
+
+resource "aws_codedeploy_deployment_group" "bookstore_group" {
+  app_name              = aws_codedeploy_app.bookstore.name
+  deployment_group_name = var.codedeploy_application_group
+  service_role_arn      = aws_iam_role.code_deploy_role.arn
+  deployment_config_name = "CodeDeployDefault.AllAtOnce"
+
+  ec2_tag_set {
+    ec2_tag_filter {
+      key   = "Name"
+      type  = "KEY_AND_VALUE"
+      value = var.ec2_instance_tag
+    }
+  }
+
+  # this deployment style is default so not actually needed for now
+  deployment_style {
+    deployment_option = "WITHOUT_TRAFFIC_CONTROL"
+    deployment_type   = "IN_PLACE"
+  }
+
+  auto_rollback_configuration {
+    enabled = true
+    events  = ["DEPLOYMENT_FAILURE"]
+  }
+}
+
+# create route53 record so that we don't need to manually update in DNS zone
+resource "aws_route53_record" "www" {
+  zone_id = var.route53_zone_id
+  name    = var.route53_domain_name
+  type    = "A"
+  ttl     = "60"
+  records = ["${aws_instance.ec2.public_ip}"]
+}
+
+
+# circleci roles and policies
 resource "aws_iam_policy" "circleci_upload_to_s3" {
   name = var.circleci_upload_to_s3_policy_name
   description = "IAM policy for CircleCI to upload application to S3 bucket"

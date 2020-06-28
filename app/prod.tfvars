@@ -32,4 +32,6 @@ circleci_upload_to_s3_policy_name = "CircleCI-Upload-To-S3"
 circleci_codedeploy_policy_name = "CircleCI-Code-Deploy"
 aws_account_id = "440205144781" # Change this according to env
 codedeploy_application_name = "bookstore"
+codedeploy_application_topic = "bookstore-topic"
+codedeploy_application_group = "bookstore-deploy-group"
 circleci_ec2_ami_policy_name = "CircleCI-EC2-Ami"
