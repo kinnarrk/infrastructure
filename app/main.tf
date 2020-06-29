@@ -634,7 +634,11 @@ resource "aws_iam_policy" "circleci_upload_to_s3" {
                 "s3:Get*",
                 "s3:List*"
             ],
-            "Resource": "arn:aws:s3:::${var.s3_code_deploy_bucket_name}"
+            "Resource": [
+              "arn:aws:s3:::${var.s3_code_deploy_bucket_name}",
+              "arn:aws:s3:::${var.s3_code_deploy_bucket_name}/*"
+            ]
+            
         }
     ]
 }
