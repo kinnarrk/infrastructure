@@ -438,6 +438,7 @@ resource "aws_instance" "ec2" {
                 echo "IAMInstanceProfileARN=${aws_iam_instance_profile.s3_profile.arn}" >> /etc/environment
                 echo "IAMInstanceProfileID=${aws_iam_instance_profile.s3_profile.id}" >> /etc/environment
                 echo "DEPLOYMENT_GROUP_NAME=production" >> /etc/environment
+                echo "NODE_ENV=production" >> /etc/environment
                 EOF
 
   iam_instance_profile = aws_iam_instance_profile.s3_profile.name
