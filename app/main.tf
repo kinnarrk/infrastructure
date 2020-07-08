@@ -176,6 +176,19 @@ variable "route53_zone_id" { # required
 variable "route53_domain_name" { # required
   type = string
 }
+
+variable "cloudwatch_iam_policy_name" { # required
+  type = string
+}
+
+variable "cloudwatch_log_group_name" { # required
+  type = string
+}
+
+variable "log_retention_days" { # required
+  type = number
+}
+
 # variables end
 
 # VPC
@@ -439,6 +452,7 @@ resource "aws_instance" "ec2" {
                 echo "IAMInstanceProfileID=${aws_iam_instance_profile.s3_profile.id}" >> /etc/environment
                 echo "DEPLOYMENT_GROUP_NAME=production" >> /etc/environment
                 echo "NODE_ENV=production" >> /etc/environment
+                echo "DEPLOYMENT_REGION=${var.region}" >> /etc/environment
                 EOF
 
   iam_instance_profile = aws_iam_instance_profile.s3_profile.name
@@ -519,6 +533,46 @@ EOF
 resource "aws_iam_role_policy_attachment" "role-policy-attach" {
   role = aws_iam_role.role.name
   policy_arn = aws_iam_policy.policy.arn
+}
+
+resource "aws_iam_policy" "policy_cloudwatch" {
+  name = var.cloudwatch_iam_policy_name
+  description = "IAM policy for EC2 to access Cloudwatch (for log and metricss)"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Effect": "Allow",
+      "Action": [
+        "cloudwatch:PutMetricData",
+        "ec2:DescribeVolumes",
+        "ec2:DescribeTags",
+        "logs:PutLogEvents",
+        "logs:DescribeLogStreams",
+        "logs:DescribeLogGroups",
+        "logs:CreateLogStream",
+        "logs:CreateLogGroup"
+      ],
+      "Resource": "*"
+    },
+    {
+      "Effect": "Allow",
+      "Action": [
+        "ssm:GetParameter",
+        "ssm:PutParameter"
+      ],
+      "Resource": "arn:aws:ssm:*:*:parameter/AmazonCloudWatch-*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "role-policy-attach-cloudwatch" {
+  role = aws_iam_role.role.name
+  policy_arn = aws_iam_policy.policy_cloudwatch.arn
 }
 
 resource "aws_iam_role" "code_deploy_role" {
@@ -775,3 +829,13 @@ resource "aws_dynamodb_table" "basic-dynamodb-table" {
     type = "S"
   }
 }
+
+resource "aws_cloudwatch_log_group" "cloudwatch_log_group" {
+  name = var.cloudwatch_log_group_name
+  retention_in_days = var.log_retention_days
+  tags = {
+    Environment = "production"
+    Application = "bookstore"
+  }
+}
+
