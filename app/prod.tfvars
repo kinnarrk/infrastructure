@@ -38,3 +38,6 @@ codedeploy_application_group = "bookstore-deploy-group"
 circleci_ec2_ami_policy_name = "CircleCI-EC2-Ami"
 route53_zone_id = "Z05466232A1G13MN5LZN5"   # Change this according to env
 route53_domain_name = "prod.kinnarkansara.me"   # Change this according to env
+cloudwatch_iam_policy_name = "WebAppCloudwatch"
+cloudwatch_log_group_name = "BookstoreCSYE6225"
+log_retention_days = 7

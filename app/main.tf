@@ -453,6 +453,7 @@ resource "aws_instance" "ec2" {
                 echo "DEPLOYMENT_GROUP_NAME=production" >> /etc/environment
                 echo "NODE_ENV=production" >> /etc/environment
                 echo "DEPLOYMENT_REGION=${var.region}" >> /etc/environment
+                echo "LOG_GROUP_NAME=${var.cloudwatch_log_group_name}" >> /etc/environment
                 EOF
 
   iam_instance_profile = aws_iam_instance_profile.s3_profile.name
