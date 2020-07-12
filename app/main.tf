@@ -189,6 +189,13 @@ variable "log_retention_days" { # required
   type = number
 }
 
+variable "route53_root_domain_name" { # required
+  type = string
+}
+
+variable "route53_root_zone_id" { # required
+  type = string
+}
 # variables end
 
 # VPC
@@ -840,3 +847,25 @@ resource "aws_cloudwatch_log_group" "cloudwatch_log_group" {
   }
 }
 
+
+provider "aws" {
+  profile = "root"
+  alias = "dns"
+  region = var.region
+}
+
+# data "aws_route53_zone" "selected" {
+#   provider     = aws.dns
+#   name         = var.route53_root_domain_name
+# }
+
+# create route53 record in root account so main domain points to newly created ec2
+resource "aws_route53_record" "www_root" {
+  provider = aws.dns
+  zone_id = var.route53_root_zone_id
+  # name    = "www.${data.aws_route53_zone.selected.name}"
+  name = var.route53_root_domain_name
+  type    = "A"
+  ttl     = "60"
+  records = ["${aws_instance.ec2.public_ip}"]
+}
