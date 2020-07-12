@@ -671,14 +671,15 @@ resource "aws_codedeploy_deployment_group" "bookstore_group" {
   }
 }
 
+# This creates A record in sub domain. Currenty we don't need this so commenting out.
 # create route53 record so that we don't need to manually update in DNS zone
-resource "aws_route53_record" "www" {
-  zone_id = var.route53_zone_id
-  name    = var.route53_domain_name
-  type    = "A"
-  ttl     = "60"
-  records = ["${aws_instance.ec2.public_ip}"]
-}
+# resource "aws_route53_record" "www" {
+#   zone_id = var.route53_zone_id
+#   name    = var.route53_domain_name
+#   type    = "A"
+#   ttl     = "60"
+#   records = ["${aws_instance.ec2.public_ip}"]
+# }
 
 
 # circleci roles and policies
@@ -854,6 +855,7 @@ provider "aws" {
   region = var.region
 }
 
+# We don't need this since we already have Zone created
 # data "aws_route53_zone" "selected" {
 #   provider     = aws.dns
 #   name         = var.route53_root_domain_name
