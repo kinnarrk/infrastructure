@@ -365,36 +365,48 @@ resource "aws_security_group" "application" {
   description = "Allow Node app inbound traffic"
   vpc_id      = aws_vpc.vpc.id
 
-  ingress {
-    description = "SSH"
-    from_port   = 22
-    to_port     = 22
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
-  }
+# Below should only be used when launching single EC2 instance
+  # ingress {
+  #   description = "SSH"
+  #   from_port   = 22
+  #   to_port     = 22
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
+  # }
 
-  ingress {
-    description = "HTTP default"
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
-  }
+  # ingress {
+  #   description = "HTTP default"
+  #   from_port   = 80
+  #   to_port     = 80
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
+  # }
 
-  ingress {
-    description = "TLS from VPC for Node"
-    from_port   = 443
-    to_port     = 443
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
-  }
+  # ingress {
+  #   description = "TLS from VPC for Node"
+  #   from_port   = 443
+  #   to_port     = 443
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
+  # }
 
+  # ingress {
+  #   description = "Node default"
+  #   from_port   = 3000
+  #   to_port     = 3000
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
+  # }
+
+  # Ingress only from load balancer
   ingress {
-    description = "Node default"
+    description = "Node default from load balancer"
     from_port   = 3000
     to_port     = 3000
     protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
+    security_groups = [
+      aws_security_group.alb_security_group.id,
+    ]
   }
 
   # allow all outgoing traffic
@@ -1218,9 +1230,9 @@ resource "aws_alb_target_group" "alb_target_group" {
   }   
   health_check {    
     healthy_threshold   = 3    
-    unhealthy_threshold = 10    
+    unhealthy_threshold = 5    
     timeout             = 5    
-    interval            = 10    
+    interval            = 30    
     path                = var.alb_healthcheck_path
     port                = var.alb_server_port
     matcher = "200"  # has to be HTTP 200 or fails
