@@ -196,6 +196,115 @@ variable "route53_root_domain_name" { # required
 variable "route53_root_zone_id" { # required
   type = string
 }
+
+variable "aws_launch_configuration_name" { # required
+  type = string
+}
+
+variable "asg_name" { # required
+  type = string
+}
+
+variable "asg_min_size" { # required
+  type = number
+}
+
+variable "asg_max_size" { # required
+  type = number
+}
+
+variable "asg_desired_capacity" { # required
+  type = number
+}
+
+variable "asg_default_cooldown" { # required
+  type = number
+}
+
+variable "asg_health_check_grace_period" { # required
+  type = number
+}
+
+variable "asg_health_check_type" { # required
+  type = string
+}
+
+variable "asg_policyup_adjustment" { # required
+  type = number
+}
+
+variable "asg_policyup_adjustment_type" { # required
+  type = string
+}
+
+variable "asg_policyup_cooldown" { # required
+  type = number
+}
+
+variable "asg_policydown_adjustment" { # required
+  type = number
+}
+
+variable "asg_policydown_adjustment_type" { # required
+  type = string
+}
+
+variable "asg_policydown_cooldown" { # required
+  type = number
+}
+
+variable "asg_cpu_alarm_high_period" { # required
+  type = string
+}
+
+variable "asg_cpu_alarm_high_evaluation_periods" { # required
+  type = string
+}
+
+variable "asg_cpu_alarm_high_threshold" { # required
+  type = string
+}
+
+variable "asg_cpu_alarm_low_period" { # required
+  type = string
+}
+
+variable "asg_cpu_alarm_low_evaluation_periods" { # required
+  type = string
+}
+
+variable "asg_cpu_alarm_low_threshold" { # required
+  type = string
+}
+
+variable "alb_name" { # required
+  type = string
+}
+
+variable "alb_port" { # required
+  type = number
+}
+
+variable "alb_server_port" { # required
+  type = number
+}
+
+variable "alb_priority" { # required
+  type = number
+}
+
+variable "alb_path" { # required
+  type = string
+}
+
+variable "alb_target_group_name" { # required
+  type = string
+}
+
+variable "alb_healthcheck_path" { # required
+  type = string
+}
+
 # variables end
 
 # VPC
@@ -415,60 +524,60 @@ resource "aws_key_pair" "publickey" {
 }
 
 # EC2 instance specifying AMI
-resource "aws_instance" "ec2" {
-  # name = var.ec2_instance_name
-  ami = var.ami_id
-  instance_type = var.ec2_instance_type
-  disable_api_termination = false
-  associate_public_ip_address = true
+# resource "aws_instance" "ec2" {
+  ## name = var.ec2_instance_name
+  # ami = var.ami_id
+  # instance_type = var.ec2_instance_type
+  # disable_api_termination = false
+  # associate_public_ip_address = true
 
-  subnet_id = aws_subnet.subnet[0].id
-  # count = var.zonecount
-  # availability_zone = data.aws_availability_zones.available.names[count.index]
+  # subnet_id = aws_subnet.subnet[0].id
+  ## count = var.zonecount
+  ## availability_zone = data.aws_availability_zones.available.names[count.index]
 
-  vpc_security_group_ids = [aws_security_group.application.id]
+  # vpc_security_group_ids = [aws_security_group.application.id]
 
-  key_name = aws_key_pair.publickey.key_name
+  # key_name = aws_key_pair.publickey.key_name
 
-  root_block_device {   
-    volume_type = "gp2"
-    volume_size = 20
-    delete_on_termination = true
-  }
+  # root_block_device {   
+  #   volume_type = "gp2"
+  #   volume_size = 20
+  #   delete_on_termination = true
+  # }
 
-  ebs_block_device {
-    device_name = "/dev/sdh"
-    volume_type = "gp2"
-    volume_size = 20
-    delete_on_termination = true
-  }
+  # ebs_block_device {
+  #   device_name = "/dev/sdh"
+  #   volume_type = "gp2"
+  #   volume_size = 20
+  #   delete_on_termination = true
+  # }
 
-  user_data = <<-EOF
-                #!/bin/bash
-                echo "DBName=${var.db_name}" >> /etc/environment
-                echo "DBUser=${var.db_username}" >> /etc/environment
-                echo "DBHost=${aws_db_instance.mysqldb.address}" >> /etc/environment
-                echo "DBPort=${aws_db_instance.mysqldb.port}" >> /etc/environment
-                echo "DBPassword=${var.db_password}" >> /etc/environment
-                echo "DBEndpoint=${aws_db_instance.mysqldb.endpoint}" >> /etc/environment
-                echo "S3BucketName=${aws_s3_bucket.kinnars_bucket.id}" >> /etc/environment
-                echo "S3BucketDomain=${aws_s3_bucket.kinnars_bucket.bucket_domain_name}" >> /etc/environment
-                echo "S3BucketARN=${aws_s3_bucket.kinnars_bucket.arn}" >> /etc/environment
-                echo "IAMInstanceProfileName=${aws_iam_instance_profile.s3_profile.name}" >> /etc/environment
-                echo "IAMInstanceProfileARN=${aws_iam_instance_profile.s3_profile.arn}" >> /etc/environment
-                echo "IAMInstanceProfileID=${aws_iam_instance_profile.s3_profile.id}" >> /etc/environment
-                echo "DEPLOYMENT_GROUP_NAME=production" >> /etc/environment
-                echo "NODE_ENV=production" >> /etc/environment
-                echo "DEPLOYMENT_REGION=${var.region}" >> /etc/environment
-                echo "LOG_GROUP_NAME=${var.cloudwatch_log_group_name}" >> /etc/environment
-                EOF
+  # user_data = <<-EOF
+  #               #!/bin/bash
+  #               echo "DBName=${var.db_name}" >> /etc/environment
+  #               echo "DBUser=${var.db_username}" >> /etc/environment
+  #               echo "DBHost=${aws_db_instance.mysqldb.address}" >> /etc/environment
+  #               echo "DBPort=${aws_db_instance.mysqldb.port}" >> /etc/environment
+  #               echo "DBPassword=${var.db_password}" >> /etc/environment
+  #               echo "DBEndpoint=${aws_db_instance.mysqldb.endpoint}" >> /etc/environment
+  #               echo "S3BucketName=${aws_s3_bucket.kinnars_bucket.id}" >> /etc/environment
+  #               echo "S3BucketDomain=${aws_s3_bucket.kinnars_bucket.bucket_domain_name}" >> /etc/environment
+  #               echo "S3BucketARN=${aws_s3_bucket.kinnars_bucket.arn}" >> /etc/environment
+  #               echo "IAMInstanceProfileName=${aws_iam_instance_profile.s3_profile.name}" >> /etc/environment
+  #               echo "IAMInstanceProfileARN=${aws_iam_instance_profile.s3_profile.arn}" >> /etc/environment
+  #               echo "IAMInstanceProfileID=${aws_iam_instance_profile.s3_profile.id}" >> /etc/environment
+  #               echo "DEPLOYMENT_GROUP_NAME=production" >> /etc/environment
+  #               echo "NODE_ENV=production" >> /etc/environment
+  #               echo "DEPLOYMENT_REGION=${var.region}" >> /etc/environment
+  #               echo "LOG_GROUP_NAME=${var.cloudwatch_log_group_name}" >> /etc/environment
+  #               EOF
 
-  iam_instance_profile = aws_iam_instance_profile.s3_profile.name
+  # iam_instance_profile = aws_iam_instance_profile.s3_profile.name
 
-  tags = {
-    Name = var.ec2_instance_tag
-  }
-}
+  # tags = {
+  #   Name = var.ec2_instance_tag
+  # }
+# }
 
 # instance profile role policy and role-policy attachment
 resource "aws_iam_instance_profile" "s3_profile" {
@@ -651,13 +760,16 @@ resource "aws_codedeploy_deployment_group" "bookstore_group" {
   service_role_arn      = aws_iam_role.code_deploy_role.arn
   deployment_config_name = "CodeDeployDefault.AllAtOnce"
 
-  ec2_tag_set {
-    ec2_tag_filter {
-      key   = "Name"
-      type  = "KEY_AND_VALUE"
-      value = var.ec2_instance_tag
-    }
-  }
+  autoscaling_groups = [aws_autoscaling_group.autoscaling_group.name]
+
+  # This is for individual EC2 deployment
+  # ec2_tag_set {
+  #   ec2_tag_filter {
+  #     key   = "Name"
+  #     type  = "KEY_AND_VALUE"
+  #     value = var.ec2_instance_tag
+  #   }
+  # }
 
   # this deployment style is default so not actually needed for now
   deployment_style {
@@ -670,17 +782,6 @@ resource "aws_codedeploy_deployment_group" "bookstore_group" {
     events  = ["DEPLOYMENT_FAILURE"]
   }
 }
-
-# This creates A record in sub domain. Currenty we don't need this so commenting out.
-# create route53 record so that we don't need to manually update in DNS zone
-# resource "aws_route53_record" "www" {
-#   zone_id = var.route53_zone_id
-#   name    = var.route53_domain_name
-#   type    = "A"
-#   ttl     = "60"
-#   records = ["${aws_instance.ec2.public_ip}"]
-# }
-
 
 # circleci roles and policies
 resource "aws_iam_policy" "circleci_upload_to_s3" {
@@ -848,26 +949,288 @@ resource "aws_cloudwatch_log_group" "cloudwatch_log_group" {
   }
 }
 
+# This creates A record in sub domain.
+# create route53 record so that we don't need to manually update in DNS zone
+resource "aws_route53_record" "www" {
+  zone_id = var.route53_zone_id
+  name    = var.route53_domain_name
+  type    = "A"
+  
+  # for single ec2
+  # ttl     = "60"
+  # records = ["${aws_instance.ec2.public_ip}"]
 
+  # for load balancer
+  alias {
+    name                   = aws_alb.application_load_balancer.dns_name
+    zone_id                = aws_alb.application_load_balancer.zone_id
+    evaluate_target_health = true
+  }
+}
+
+# As per assignment discussion on Canvas, we have to create A record in subdomain only. Not in root domain
+# Uncomment below two resources if A record needs to be added to root account (main domain)
 provider "aws" {
   profile = "root"
   alias = "dns"
   region = var.region
 }
 
-# We don't need this since we already have Zone created
-# data "aws_route53_zone" "selected" {
-#   provider     = aws.dns
-#   name         = var.route53_root_domain_name
-# }
-
 # create route53 record in root account so main domain points to newly created ec2
 resource "aws_route53_record" "www_root" {
   provider = aws.dns
   zone_id = var.route53_root_zone_id
-  # name    = "www.${data.aws_route53_zone.selected.name}"
   name = var.route53_root_domain_name
   type    = "A"
-  ttl     = "60"
-  records = ["${aws_instance.ec2.public_ip}"]
+
+  # for single ec2
+  # ttl     = "60"
+  # records = ["${aws_instance.ec2.public_ip}"]
+
+  # for load balancer
+  alias {
+    name                   = aws_alb.application_load_balancer.dns_name
+    zone_id                = aws_alb.application_load_balancer.zone_id
+    evaluate_target_health = true
+  }
+}
+
+## We don't need this since we already have Zone created
+## data "aws_route53_zone" "selected" {
+##   provider     = aws.dns
+##   name         = var.route53_root_domain_name
+## }
+
+# resource "aws_launch_template" "webapp_launch_template" {
+#   name_prefix   = "webapp"
+#   image_id      = var.ami_id
+#   instance_type = var.ec2_instance_type
+# }
+
+resource "aws_launch_configuration" "launch_conf" {
+  name = var.aws_launch_configuration_name
+  image_id = var.ami_id
+  instance_type = var.ec2_instance_type
+  security_groups = [aws_security_group.application.id]
+  key_name = aws_key_pair.publickey.key_name
+  associate_public_ip_address = true
+  iam_instance_profile = aws_iam_instance_profile.s3_profile.name
+
+  root_block_device {   
+    volume_type = "gp2"
+    volume_size = 20
+    delete_on_termination = true
+  }
+
+  ebs_block_device {
+    device_name = "/dev/sdh"
+    volume_type = "gp2"
+    volume_size = 20
+    delete_on_termination = true
+  }
+
+  user_data = <<-EOF
+                #!/bin/bash
+                echo "DBName=${var.db_name}" >> /etc/environment
+                echo "DBUser=${var.db_username}" >> /etc/environment
+                echo "DBHost=${aws_db_instance.mysqldb.address}" >> /etc/environment
+                echo "DBPort=${aws_db_instance.mysqldb.port}" >> /etc/environment
+                echo "DBPassword=${var.db_password}" >> /etc/environment
+                echo "DBEndpoint=${aws_db_instance.mysqldb.endpoint}" >> /etc/environment
+                echo "S3BucketName=${aws_s3_bucket.kinnars_bucket.id}" >> /etc/environment
+                echo "S3BucketDomain=${aws_s3_bucket.kinnars_bucket.bucket_domain_name}" >> /etc/environment
+                echo "S3BucketARN=${aws_s3_bucket.kinnars_bucket.arn}" >> /etc/environment
+                echo "IAMInstanceProfileName=${aws_iam_instance_profile.s3_profile.name}" >> /etc/environment
+                echo "IAMInstanceProfileARN=${aws_iam_instance_profile.s3_profile.arn}" >> /etc/environment
+                echo "IAMInstanceProfileID=${aws_iam_instance_profile.s3_profile.id}" >> /etc/environment
+                echo "DEPLOYMENT_GROUP_NAME=production" >> /etc/environment
+                echo "NODE_ENV=production" >> /etc/environment
+                echo "DEPLOYMENT_REGION=${var.region}" >> /etc/environment
+                echo "LOG_GROUP_NAME=${var.cloudwatch_log_group_name}" >> /etc/environment
+                EOF
+              
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_group" "autoscaling_group" {
+  name = var.asg_name
+  launch_configuration = aws_launch_configuration.launch_conf.name
+  min_size = var.asg_min_size
+  max_size = var.asg_max_size
+  desired_capacity = var.asg_desired_capacity
+  default_cooldown = var.asg_default_cooldown
+  health_check_grace_period = var.asg_health_check_grace_period
+  health_check_type = var.asg_health_check_type
+  vpc_zone_identifier = [aws_subnet.subnet[0].id]
+
+  tag {
+    key = "Name"
+    value = "terraform-asg-webapp"
+    propagate_at_launch = true
+  }
+
+  # target_group_arns = [aws_alb_target_group.alb_target_group.arn]
+
+  # depends_on = [aws_alb.application_load_balancer]
+
+  lifecycle {
+    create_before_destroy = true
+  }
+}
+
+resource "aws_autoscaling_policy" "autoscaling_policy_up" {
+  name = "WebServerScaleUpPolicy"
+  scaling_adjustment = var.asg_policyup_adjustment
+  adjustment_type = var.asg_policyup_adjustment_type
+  cooldown = var.asg_policyup_cooldown
+  autoscaling_group_name = aws_autoscaling_group.autoscaling_group.name
+}
+
+resource "aws_autoscaling_policy" "autoscaling_policy_down" {
+  name = "WebServerScaleDownPolicy"
+  scaling_adjustment = var.asg_policydown_adjustment
+  adjustment_type = var.asg_policydown_adjustment_type
+  cooldown = var.asg_policydown_cooldown
+  autoscaling_group_name = aws_autoscaling_group.autoscaling_group.name
+}
+
+resource "aws_cloudwatch_metric_alarm" "cpu_alarm_high" {
+  alarm_name = "CPUAlarmHigh"
+  alarm_description = "Scale-up if CPU > 5% for 1 minute/s"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  statistic = "Average"
+  period = var.asg_cpu_alarm_high_period
+  evaluation_periods = var.asg_cpu_alarm_high_evaluation_periods
+  threshold = var.asg_cpu_alarm_high_threshold
+
+  alarm_actions = [aws_autoscaling_policy.autoscaling_policy_up.arn]
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.autoscaling_group.name
+  }
+  comparison_operator = "GreaterThanThreshold"
+}
+
+resource "aws_cloudwatch_metric_alarm" "cpu_alarm_low" {
+  alarm_name = "CPUAlarmLow"
+  alarm_description = "Scale-down if CPU < 3% for 1 minute/s"
+  metric_name = "CPUUtilization"
+  namespace = "AWS/EC2"
+  statistic = "Average"
+  period = var.asg_cpu_alarm_low_period
+  evaluation_periods = var.asg_cpu_alarm_low_evaluation_periods
+  threshold = var.asg_cpu_alarm_low_threshold
+
+  alarm_actions = [aws_autoscaling_policy.autoscaling_policy_down.arn]
+
+  dimensions = {
+    AutoScalingGroupName = aws_autoscaling_group.autoscaling_group.name
+  }
+  comparison_operator = "LessThanThreshold"
+}
+
+resource "aws_security_group" "alb_security_group" {
+  name = "elb-security-group"
+  description = "Allow load balancer inbound traffic"
+  vpc_id = aws_vpc.vpc.id  
+  # Allow all outbound
+  egress {
+    from_port   = 0
+    to_port     = 0
+    protocol    = "-1"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+  # Inbound HTTP from anywhere
+  ingress {
+    from_port   = 80
+    to_port     = 80
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"]
+  }
+}
+
+resource "aws_alb" "application_load_balancer" {
+  name = var.alb_name
+  internal = false
+  # load_balancer_type = "application"
+  security_groups    = [aws_security_group.alb_security_group.id]
+  subnets            = aws_subnet.subnet.*.id
+  
+  # enable_deletion_protection = true
+
+  # access_logs {
+  #   bucket  = "${aws_s3_bucket.lb_logs.bucket}"
+  #   prefix  = "test-lb"
+  #   enabled = true
+  # }
+
+  # listener {
+  #   lb_port           = var.alb_port
+  #   lb_protocol       = "http"
+  #   instance_port     = var.alb_server_port
+  #   instance_protocol = "http"
+  # }
+
+  tags = {
+    Name = var.alb_name
+  }
+}
+
+resource "aws_alb_listener" "webapp_listener" {
+  load_balancer_arn = aws_alb.application_load_balancer.arn
+  port              = var.alb_port
+  protocol          = "HTTP"
+  # ssl_policy        = "ELBSecurityPolicy-2016-08"
+  # certificate_arn   = "arn:aws:iam::187416307283:server-certificate/test_cert_rab3wuqwgja25ct3n4jdj2tzu4"
+
+  default_action {
+    type             = "forward"
+    target_group_arn = aws_alb_target_group.alb_target_group.arn
+  }
+}
+
+resource "aws_alb_listener_rule" "listener_rule" {
+  depends_on = [aws_alb_target_group.alb_target_group]
+  listener_arn = aws_alb_listener.webapp_listener.arn
+  priority = var.alb_priority  
+  action {    
+    type = "forward"    
+    target_group_arn = aws_alb_target_group.alb_target_group.arn
+  }   
+  condition {    
+    field  = "path-pattern"    
+    values = [var.alb_path]  
+  }
+}
+
+resource "aws_alb_target_group" "alb_target_group" {  
+  name     = var.alb_target_group_name
+  port     = var.alb_server_port
+  protocol = "HTTP"
+  vpc_id   = aws_vpc.vpc.id
+  stickiness {    
+    type            = "lb_cookie"    
+    cookie_duration = 1800    
+    enabled         = true 
+  }   
+  health_check {    
+    healthy_threshold   = 3    
+    unhealthy_threshold = 10    
+    timeout             = 5    
+    interval            = 10    
+    path                = var.alb_healthcheck_path
+    port                = var.alb_server_port
+    matcher = "200"  # has to be HTTP 200 or fails
+  }
+  tags = {    
+    name = var.alb_target_group_name    
+  }
+}
+
+resource "aws_autoscaling_attachment" "alb_asg_attach" {
+  alb_target_group_arn   = aws_alb_target_group.alb_target_group.arn
+  autoscaling_group_name = aws_autoscaling_group.autoscaling_group.id
 }
