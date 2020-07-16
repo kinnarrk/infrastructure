@@ -305,6 +305,21 @@ variable "alb_healthcheck_path" { # required
   type = string
 }
 
+variable "alb_healthcheck_healthy_threshold" { # required
+  type = number
+}
+
+variable "alb_healthcheck_unhealthy_threshold" { # required
+  type = number
+}
+
+variable "alb_healthcheck_timeout" { # required
+  type = number
+}
+
+variable "alb_healthcheck_interval" { # required
+  type = number
+}
 # variables end
 
 # VPC
@@ -1162,6 +1177,13 @@ resource "aws_security_group" "alb_security_group" {
     protocol    = "tcp"
     cidr_blocks = ["0.0.0.0/0"]
   }
+  # Inbound HTTPS from anywhere
+  ingress {
+    from_port   = 443
+    to_port     = 443
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
+  }
 }
 
 resource "aws_alb" "application_load_balancer" {
@@ -1207,38 +1229,38 @@ resource "aws_alb_listener" "webapp_listener" {
 resource "aws_alb_listener_rule" "listener_rule" {
   depends_on = [aws_alb_target_group.alb_target_group]
   listener_arn = aws_alb_listener.webapp_listener.arn
-  priority = var.alb_priority  
-  action {    
-    type = "forward"    
+  priority = var.alb_priority
+  action {
+    type = "forward"
     target_group_arn = aws_alb_target_group.alb_target_group.arn
-  }   
-  condition {    
-    field  = "path-pattern"    
-    values = [var.alb_path]  
+  }
+  condition {
+    field  = "path-pattern"
+    values = [var.alb_path]
   }
 }
 
-resource "aws_alb_target_group" "alb_target_group" {  
+resource "aws_alb_target_group" "alb_target_group" {
   name     = var.alb_target_group_name
   port     = var.alb_server_port
   protocol = "HTTP"
   vpc_id   = aws_vpc.vpc.id
-  stickiness {    
-    type            = "lb_cookie"    
-    cookie_duration = 1800    
-    enabled         = true 
+  stickiness {
+    type            = "lb_cookie"
+    cookie_duration = 1800
+    enabled         = true
   }   
-  health_check {    
-    healthy_threshold   = 3    
-    unhealthy_threshold = 5    
-    timeout             = 5    
-    interval            = 30    
+  health_check {
+    healthy_threshold   = var.alb_healthcheck_healthy_threshold    
+    unhealthy_threshold = var.alb_healthcheck_unhealthy_threshold
+    timeout             = var.alb_healthcheck_timeout    
+    interval            = var.alb_healthcheck_interval 
     path                = var.alb_healthcheck_path
     port                = var.alb_server_port
     matcher = "200"  # has to be HTTP 200 or fails
   }
-  tags = {    
-    name = var.alb_target_group_name    
+  tags = {
+    name = var.alb_target_group_name
   }
 }
 
