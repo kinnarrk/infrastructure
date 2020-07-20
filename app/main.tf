@@ -997,30 +997,30 @@ resource "aws_route53_record" "www" {
 
 # As per assignment discussion on Canvas, we have to create A record in subdomain only. Not in root domain
 # Uncomment below two resources if A record needs to be added to root account (main domain)
-provider "aws" {
-  profile = "root"
-  alias = "dns"
-  region = var.region
-}
+# provider "aws" {
+#   profile = "root"
+#   alias = "dns"
+#   region = var.region
+# }
 
 # create route53 record in root account so main domain points to newly created ec2
-resource "aws_route53_record" "www_root" {
-  provider = aws.dns
-  zone_id = var.route53_root_zone_id
-  name = var.route53_root_domain_name
-  type    = "A"
+# resource "aws_route53_record" "www_root" {
+#   provider = aws.dns
+#   zone_id = var.route53_root_zone_id
+#   name = var.route53_root_domain_name
+#   type    = "A"
 
   # for single ec2
   # ttl     = "60"
   # records = ["${aws_instance.ec2.public_ip}"]
 
   # for load balancer
-  alias {
-    name                   = aws_alb.application_load_balancer.dns_name
-    zone_id                = aws_alb.application_load_balancer.zone_id
-    evaluate_target_health = true
-  }
-}
+#   alias {
+#     name                   = aws_alb.application_load_balancer.dns_name
+#     zone_id                = aws_alb.application_load_balancer.zone_id
+#     evaluate_target_health = true
+#   }
+# }
 
 ## We don't need this since we already have Zone created
 ## data "aws_route53_zone" "selected" {
