@@ -74,3 +74,5 @@ alb_healthcheck_healthy_threshold = 3
 alb_healthcheck_unhealthy_threshold = 5
 alb_healthcheck_timeout = 5
 alb_healthcheck_interval = 10
+lambda_source_file = "/home/kinnar/csye6225/faas/email.js"
+lambda_output_path = "/home/kinnar/csye6225/faas/email.zip"

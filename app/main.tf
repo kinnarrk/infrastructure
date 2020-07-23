@@ -320,6 +320,18 @@ variable "alb_healthcheck_timeout" { # required
 variable "alb_healthcheck_interval" { # required
   type = number
 }
+
+variable "lambda_source_file" { # required
+  type = string
+}
+
+variable "lambda_output_path" { # required
+  type = string
+}
+
+variable "sns_iam_policy_name" { # required
+  type = string
+}
 # variables end
 
 # VPC
@@ -597,6 +609,7 @@ resource "aws_key_pair" "publickey" {
   #               echo "NODE_ENV=production" >> /etc/environment
   #               echo "DEPLOYMENT_REGION=${var.region}" >> /etc/environment
   #               echo "LOG_GROUP_NAME=${var.cloudwatch_log_group_name}" >> /etc/environment
+  #               echo "SNS_TOPIC_ARN=${aws_sns_topic.sns_email.arn}" >> /etc/environment
   #               EOF
 
   # iam_instance_profile = aws_iam_instance_profile.s3_profile.name
@@ -1074,6 +1087,7 @@ resource "aws_launch_configuration" "launch_conf" {
                 echo "NODE_ENV=production" >> /etc/environment
                 echo "DEPLOYMENT_REGION=${var.region}" >> /etc/environment
                 echo "LOG_GROUP_NAME=${var.cloudwatch_log_group_name}" >> /etc/environment
+                echo "SNS_TOPIC_ARN=${aws_sns_topic.sns_email.arn}" >> /etc/environment
                 EOF
               
   lifecycle {
@@ -1267,4 +1281,113 @@ resource "aws_alb_target_group" "alb_target_group" {
 resource "aws_autoscaling_attachment" "alb_asg_attach" {
   alb_target_group_arn   = aws_alb_target_group.alb_target_group.arn
   autoscaling_group_name = aws_autoscaling_group.autoscaling_group.id
+}
+
+# Assignment 9
+resource "aws_sns_topic" "sns_email" {
+    name = "send-email-topic"
+}
+
+resource "aws_sns_topic_subscription" "email_sns_target" {
+    topic_arn = aws_sns_topic.sns_email.arn
+    protocol = "lambda"
+    endpoint  = aws_lambda_function.email_lambda.arn
+}
+
+data "archive_file" "lambda_zip" {
+  type        = "zip"
+  source_file = var.lambda_source_file
+  output_path = var.lambda_output_path
+}
+
+resource "aws_lambda_function" "email_lambda" {
+  filename         = var.lambda_output_path
+  function_name    = "send_email"
+  role             = aws_iam_role.lambda_role.arn
+  handler          = "exports.handler"
+  source_code_hash = data.archive_file.lambda_zip.output_base64sha256
+  runtime          = "nodejs12.x"
+}
+
+resource "aws_lambda_permission" "with_sns" {
+    statement_id = "AllowExecutionFromSNS"
+    action = "lambda:InvokeFunction"
+    function_name = aws_lambda_function.email_lambda.arn
+    principal = "sns.amazonaws.com"
+    source_arn = aws_sns_topic.sns_email.arn
+}
+
+resource "aws_iam_role" "lambda_role" {
+  name = "iam_for_lambda_with_sns"
+
+  assume_role_policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": "sts:AssumeRole",
+      "Principal": {
+        "Service": "lambda.amazonaws.com"
+      },
+      "Effect": "Allow",
+      "Sid": ""
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "lambda_role_logs_policy" {
+    name = "LambdaRolePolicy"
+    role = aws_iam_role.lambda_role.id
+    policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": [
+    {
+      "Action": [
+        "logs:CreateLogGroup",
+        "logs:CreateLogStream",
+        "logs:PutLogEvents"
+      ],
+      "Effect": "Allow",
+      "Resource": "*"
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "sns_instance_policy" {
+  name = var.sns_iam_policy_name
+  description = "IAM policy for EC2 to publish SNS Topic"
+
+  policy = <<EOF
+{
+  "Version": "2012-10-17",
+  "Statement": 
+  [
+    {
+      "Sid": "AWSConfigSNSPolicy20150201",
+      "Action": [
+        "SNS:Publish"
+      ],
+      "Effect": "Allow",
+      "Resource": "${aws_sns_topic.sns_email.arn}",
+      "Principal": {
+        "AWS": [
+          ${aws_iam_role.role.arn},
+          079111615792,
+          440205144781
+        ]
+      }
+    }
+  ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy_attachment" "role-policy-attach-ec2-sns" {
+  role = aws_iam_role.role.name
+  policy_arn = aws_iam_policy.sns_instance_policy.arn
 }
