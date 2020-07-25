@@ -332,6 +332,18 @@ variable "lambda_output_path" { # required
 variable "sns_iam_policy_name" { # required
   type = string
 }
+
+variable "ses_lambda_iam_policy_name" { # required
+  type = string
+}
+
+variable "dynamodb_lambda_iam_policy_name" { # required
+  type = string
+}
+
+variable "circleci_lambda_iam_policy_name" { # required
+  type = string
+}
 # variables end
 
 # VPC
@@ -961,12 +973,12 @@ resource "aws_iam_user_policy_attachment" "circleci_ec2_ami_policy_attach" {
   policy_arn = aws_iam_policy.circleci_ec2_ami.arn
 }
 
-resource "aws_dynamodb_table" "basic-dynamodb-table" {
+resource "aws_dynamodb_table" "basic_dynamodb_table" {
   name = "csye6225"
-  hash_key = "id"
-  billing_mode = "PAY_PER_REQUEST"
+  billing_mode = "PROVISIONED"
   read_capacity  = 5
   write_capacity = 5
+  hash_key = "id"
   range_key = "timestamp"
 
   attribute {
@@ -977,6 +989,21 @@ resource "aws_dynamodb_table" "basic-dynamodb-table" {
   attribute {
     name = "timestamp"
     type = "S"
+  }
+
+  # attribute {
+  #   name = "email"
+  #   type = "S"
+  # }
+
+  # attribute {
+  #   name = "timetoexist"
+  #   type = "N"
+  # }
+
+  ttl {
+    attribute_name = "timetoexist"
+    enabled        = true
   }
 }
 
@@ -1304,9 +1331,18 @@ resource "aws_lambda_function" "email_lambda" {
   filename         = var.lambda_output_path
   function_name    = "send_email"
   role             = aws_iam_role.lambda_role.arn
-  handler          = "exports.handler"
+  handler          = "index.handler"
   source_code_hash = data.archive_file.lambda_zip.output_base64sha256
   runtime          = "nodejs12.x"
+
+  environment {
+    variables = {
+      NODE_ENV = "production",
+      DOMAIN = var.route53_domain_name,
+      DEPLOYMENT_REGION = var.region,
+      DYNAMODB_TABLE_NAME = aws_dynamodb_table.basic_dynamodb_table.id
+    }
+  }
 }
 
 resource "aws_lambda_permission" "with_sns" {
@@ -1365,22 +1401,13 @@ resource "aws_iam_policy" "sns_instance_policy" {
   policy = <<EOF
 {
   "Version": "2012-10-17",
-  "Statement": 
-  [
-    {
-      "Sid": "AWSConfigSNSPolicy20150201",
+  "Statement":[
+    {  
       "Action": [
         "SNS:Publish"
       ],
       "Effect": "Allow",
-      "Resource": "${aws_sns_topic.sns_email.arn}",
-      "Principal": {
-        "AWS": [
-          ${aws_iam_role.role.arn},
-          079111615792,
-          440205144781
-        ]
-      }
+      "Resource": "${aws_sns_topic.sns_email.arn}"
     }
   ]
 }
@@ -1391,3 +1418,136 @@ resource "aws_iam_role_policy_attachment" "role-policy-attach-ec2-sns" {
   role = aws_iam_role.role.name
   policy_arn = aws_iam_policy.sns_instance_policy.arn
 }
+
+resource "aws_iam_role_policy" "ses_lambda_role_policy" {
+    name = var.ses_lambda_iam_policy_name
+    role = aws_iam_role.lambda_role.id
+    policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Effect": "Allow",
+            "Action": [
+                "ses:SendEmail",
+                "ses:SendRawEmail"
+            ],
+            "Resource": "*"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_role_policy" "dynamodb_lambda_role_policy" {
+    name = var.dynamodb_lambda_iam_policy_name
+    role = aws_iam_role.lambda_role.id
+    policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Sid": "SpecificTable",
+            "Effect": "Allow",
+            "Action": [
+                "dynamodb:BatchGet*",
+                "dynamodb:DescribeStream",
+                "dynamodb:DescribeTable",
+                "dynamodb:Get*",
+                "dynamodb:Query",
+                "dynamodb:Scan",
+                "dynamodb:BatchWrite*",
+                "dynamodb:CreateTable",
+                "dynamodb:Delete*",
+                "dynamodb:Update*",
+                "dynamodb:PutItem"
+            ],
+            "Resource": "${aws_dynamodb_table.basic_dynamodb_table.arn}"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_policy" "codedeploy_lambda_policy" {
+  name = var.circleci_lambda_iam_policy_name
+  description = "IAM policy for CircleCI to deploy lambda"
+
+  policy = <<EOF
+{
+    "Version": "2012-10-17",
+    "Statement": [
+        {
+            "Action": [
+                "cloudwatch:DescribeAlarms",
+                "lambda:UpdateAlias",
+                "lambda:GetAlias",
+                "lambda:GetProvisionedConcurrencyConfig",
+                "sns:Publish"
+            ],
+            "Resource": "*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion"
+            ],
+            "Resource": "arn:aws:s3:::*/CodeDeploy/*",
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "s3:GetObject",
+                "s3:GetObjectVersion"
+            ],
+            "Resource": "*",
+            "Condition": {
+                "StringEquals": {
+                    "s3:ExistingObjectTag/UseWithCodeDeploy": "true"
+                }
+            },
+            "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "lambda:InvokeFunction"
+            ],
+            "Resource": "arn:aws:lambda:*:*:function:CodeDeployHook_*",
+            "Effect": "Allow"
+        }
+    ]
+}
+EOF
+}
+
+resource "aws_iam_user_policy_attachment" "circleci_codedeploy_lambda_policy_attach" {
+  user       = var.circleci_user_name
+  policy_arn = aws_iam_policy.codedeploy_lambda_policy.arn
+}
+
+# resource "aws_iam_policy" "ses_lambda_policy" {
+#   name = var.ses_lambda_iam_policy_name
+#   description = "IAM policy for Lambda to Send Email"
+
+#   policy = <<EOF
+# {
+#     "Version": "2012-10-17",
+#     "Statement": [
+#         {
+#             "Effect": "Allow",
+#             "Action": [
+#                 "ses:SendEmail",
+#                 "ses:SendRawEmail"
+#             ],
+#             "Resource": "*"
+#         }
+#     ]
+# }
+# EOF
+# }
+
+# resource "aws_iam_role_policy_attachment" "role-policy-attach-ec2-sns" {
+#   role = aws_iam_role.lambda_role.id
+#   policy_arn = aws_iam_policy.ses_lambda_policy.arn
+# }
