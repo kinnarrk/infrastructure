@@ -978,18 +978,18 @@ resource "aws_dynamodb_table" "basic_dynamodb_table" {
   billing_mode = "PROVISIONED"
   read_capacity  = 5
   write_capacity = 5
-  hash_key = "id"
-  range_key = "timestamp"
+  hash_key = "email"
+  # range_key = "timestamp"
 
   attribute {
-    name = "id"
+    name = "email"
     type = "S"
   }
 
-  attribute {
-    name = "timestamp"
-    type = "S"
-  }
+  # attribute {
+  #   name = "timestamp"
+  #   type = "S"
+  # }
 
   # attribute {
   #   name = "email"
@@ -1482,31 +1482,13 @@ resource "aws_iam_policy" "codedeploy_lambda_policy" {
                 "cloudwatch:DescribeAlarms",
                 "lambda:UpdateAlias",
                 "lambda:GetAlias",
+                "lambda:CreateFunction",
+                "lambda:UpdateFunctionConfiguration",
+                "lambda:UpdateFunctionCode",
                 "lambda:GetProvisionedConcurrencyConfig",
                 "sns:Publish"
             ],
             "Resource": "*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "s3:GetObject",
-                "s3:GetObjectVersion"
-            ],
-            "Resource": "arn:aws:s3:::*/CodeDeploy/*",
-            "Effect": "Allow"
-        },
-        {
-            "Action": [
-                "s3:GetObject",
-                "s3:GetObjectVersion"
-            ],
-            "Resource": "*",
-            "Condition": {
-                "StringEquals": {
-                    "s3:ExistingObjectTag/UseWithCodeDeploy": "true"
-                }
-            },
             "Effect": "Allow"
         },
         {
