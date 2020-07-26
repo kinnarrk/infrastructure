@@ -344,6 +344,10 @@ variable "dynamodb_lambda_iam_policy_name" { # required
 variable "circleci_lambda_iam_policy_name" { # required
   type = string
 }
+
+variable "alb_ssl_cirtificate_arn" { # required
+  type = string
+}
 # variables end
 
 # VPC
@@ -566,6 +570,9 @@ resource "aws_db_instance" "mysqldb" {
   parameter_group_name = "default.mysql5.7"
 
   skip_final_snapshot = true
+
+  storage_encrypted = true
+  ca_cert_identifier   = "rds-ca-2019"
 }
 
 # Pub key for aws key pair
@@ -1212,12 +1219,12 @@ resource "aws_security_group" "alb_security_group" {
     cidr_blocks = ["0.0.0.0/0"]
   }
   # Inbound HTTP from anywhere
-  ingress {
-    from_port   = 80
-    to_port     = 80
-    protocol    = "tcp"
-    cidr_blocks = ["0.0.0.0/0"]
-  }
+  # ingress {
+  #   from_port   = 80
+  #   to_port     = 80
+  #   protocol    = "tcp"
+  #   cidr_blocks = ["0.0.0.0/0"]
+  # }
   # Inbound HTTPS from anywhere
   ingress {
     from_port   = 443
@@ -1257,9 +1264,9 @@ resource "aws_alb" "application_load_balancer" {
 resource "aws_alb_listener" "webapp_listener" {
   load_balancer_arn = aws_alb.application_load_balancer.arn
   port              = var.alb_port
-  protocol          = "HTTP"
-  # ssl_policy        = "ELBSecurityPolicy-2016-08"
-  # certificate_arn   = "arn:aws:iam::187416307283:server-certificate/test_cert_rab3wuqwgja25ct3n4jdj2tzu4"
+  protocol          = "HTTPS"
+  ssl_policy        = "ELBSecurityPolicy-2016-08"
+  certificate_arn   = var.alb_ssl_cirtificate_arn
 
   default_action {
     type             = "forward"
