@@ -1497,6 +1497,13 @@ resource "aws_iam_policy" "codedeploy_lambda_policy" {
             ],
             "Resource": "arn:aws:lambda:*:*:function:CodeDeployHook_*",
             "Effect": "Allow"
+        },
+        {
+            "Action": [
+                "lambda:UpdateFunctionCode"
+            ],
+            "Resource": "${aws_lambda_function.email_lambda.arn}",
+            "Effect": "Allow"
         }
     ]
 }
