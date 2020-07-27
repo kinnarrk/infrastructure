@@ -573,6 +573,8 @@ resource "aws_db_instance" "mysqldb" {
 
   storage_encrypted = true
   ca_cert_identifier   = "rds-ca-2019"
+  # performance insights not supported in t3 and t2 micro and small
+  # performance_insights_enabled = true
 }
 
 # Pub key for aws key pair
