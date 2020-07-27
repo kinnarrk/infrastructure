@@ -142,6 +142,13 @@ alb_healthcheck_healthy_threshold = 3
 alb_healthcheck_unhealthy_threshold = 5
 alb_healthcheck_timeout = 5
 alb_healthcheck_interval = 10
+lambda_source_file = "/path/to/lambda/function.js"
+lambda_output_path = "/path/to/lambda/function.zip"
+sns_iam_policy_name = "EC2-publish-SNS-Policy"
+ses_lambda_iam_policy_name = "Lambda-SES-Policy"
+dynamodb_lambda_iam_policy_name = "Lambda-DynamoDB-Policy"
+circleci_lambda_iam_policy_name = "Lambda-Codedeploy-Policy"
+alb_ssl_cirtificate_arn = "arn:aws:acm:us-east-1:**********:certificate/**************************"
 ```
 
 ## Creating multiple VPCs from same `.tf` file(s)
@@ -186,3 +193,59 @@ Make sure to export `AWS_PROFILE` with following before executing `terraform` co
 ```
 export AWS_PROFILE=dev
 ```
+
+## Import certificate to ACM to use for load balancer
+
+### Dev
+
+Requesting ACM public certificate [AWS DOC](https://docs.aws.amazon.com/acm/latest/userguide/gs-acm-request-public.html)
+
+```
+aws acm request-certificate \
+--domain-name dev.kinnarkansara.me \
+--validation-method DNS \
+--idempotency-token 12345 \
+--tags Key=Website,Value=dev.kinnarkansara.me \
+--options CertificateTransparencyLoggingPreference=DISABLED
+```
+
+This will output the ARN of the certificate. Keep this in `tfvar` file with variable name `alb_ssl_cirtificate_arn`.
+You can see this certificate in ACM from AWS console.
+
+### Prod
+
+Use CA like Namecheap to get SSL certificate.
+Follow the steps below to Request the certificate
+
+1. Purchase certificate from CA
+
+1. Request certificate with CSR. Refer this [Namecheap Documentation](https://www.namecheap.com/support/knowledgebase/article.aspx/9592/14/generating-a-csr-on-amazon-web-services-aws/)
+
+1. Once certificate is issued, you have two options: Import certificate to ACM or Upload the certificate. `AWS_PROFILE` environment variable needs to be exported first
+
+1. Import certificate to ACM (Recommended):
+
+    Follow this [instruction](https://docs.aws.amazon.com/acm/latest/userguide/import-certificate-api-cli.html#import-certificate-cli) to import to ACM. This is better approach because once certificate is imported, it can be seen in ACM of AWS Console.
+
+    ```
+    aws acm import-certificate --certificate fileb://prod_kinnarkansara_me.crt \
+		--certificate-chain fileb://prod_kinnarkansara_me_CertificateBundle.pem \
+		--private-key fileb://prod_private.key.pem
+    ```
+
+    Important: Make sure to use `fileb://` to refer `crt` or `pem` files. [Reference](https://github.com/aws/aws-cli/issues/5041#issuecomment-621515626).
+
+1. Upload certificate to IAM (Alternate approach):
+
+    This uploads certificate to IAM role:
+
+    ```
+    aws iam upload-server-certificate --server-certificate-name ProdKinnarKansaraMe \
+        --certificate-body file://prod_kinnarkansara_me.pem \
+        --certificate-chain file://prod_kinnarkansara_me.ca-bundle \
+        --private-key file://prod_private.key.pem
+    ```
+
+
+This commands will output the ARN of the certificate. Keep this in `tfvar` file with variable name `alb_ssl_cirtificate_arn`.
+You can see this certificate in ACM from AWS console.
