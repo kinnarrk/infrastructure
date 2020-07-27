@@ -247,5 +247,7 @@ Follow the steps below to Request the certificate
     ```
 
 
-This commands will output the ARN of the certificate. Keep this in `tfvar` file with variable name `alb_ssl_cirtificate_arn`.
+### Common step
+
+This commands will output the ARN of the certificate. Keep this in respective `tfvar` file with variable name `alb_ssl_cirtificate_arn`.
 You can see this certificate in ACM from AWS console.
