@@ -409,13 +409,13 @@ resource "aws_security_group" "application" {
   vpc_id      = aws_vpc.vpc.id
 
 # Below should only be used when launching single EC2 instance
-  # ingress {
-  #   description = "SSH"
-  #   from_port   = 22
-  #   to_port     = 22
-  #   protocol    = "tcp"
-  #   cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
-  # }
+  ingress {
+    description = "SSH"
+    from_port   = 22
+    to_port     = 22
+    protocol    = "tcp"
+    cidr_blocks = ["0.0.0.0/0"] # Allow traffic from anywhere in the world
+  }
 
   # ingress {
   #   description = "HTTP default"
@@ -550,10 +550,28 @@ resource "aws_db_subnet_group" "db_subnet_group" {
   subnet_ids  = aws_subnet.subnet.*.id
 }
 
+resource "aws_db_parameter_group" "db_parameter_ssl" {
+  name   = "rds-mysql-ssl"
+  family = "mysql5.7"
+
+  parameter {
+    name         = "performance_schema"
+    value        = "1"
+    apply_method = "pending-reboot"
+  }
+}
+
 resource "aws_db_instance" "mysqldb" {
   engine = "mysql"
   engine_version = "5.7"
+
+  # Use this or below configuration
   instance_class = "db.t3.micro"
+
+  # performance insights not supported in t3 and t2 micro and small
+  # instance_class = "db.t2.medium"
+  # performance_insights_enabled = true
+
   multi_az = false
   identifier = var.db_identifier
   username = var.db_username
@@ -567,14 +585,14 @@ resource "aws_db_instance" "mysqldb" {
 
   allocated_storage    = 20
   storage_type         = "gp2"
-  parameter_group_name = "default.mysql5.7"
+  # parameter_group_name = "default.mysql5.7"
+  parameter_group_name = aws_db_parameter_group.db_parameter_ssl.name
 
   skip_final_snapshot = true
 
   storage_encrypted = true
   ca_cert_identifier   = "rds-ca-2019"
-  # performance insights not supported in t3 and t2 micro and small
-  # performance_insights_enabled = true
+  
 }
 
 # Pub key for aws key pair
