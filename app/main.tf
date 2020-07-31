@@ -93,6 +93,14 @@ variable "db_name" { # required
   type = string
 }
 
+variable "db_instance_class" { # required
+  type = string
+}
+
+variable "db_performance_insights_enabled" { # required
+  type = bool
+}
+
 variable "ec2_instance_name" { # required
   type = string
 }
@@ -566,11 +574,11 @@ resource "aws_db_instance" "mysqldb" {
   engine_version = "5.7"
 
   # Use this or below configuration
-  instance_class = "db.t3.micro"
+  instance_class = var.db_instance_class
 
   # performance insights not supported in t3 and t2 micro and small
-  # instance_class = "db.t2.medium"
-  # performance_insights_enabled = true
+  # instance_class = var.db_instance_class
+  # performance_insights_enabled = var.db_performance_insights_enabled
 
   multi_az = false
   identifier = var.db_identifier
